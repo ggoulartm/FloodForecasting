@@ -1,0 +1,29 @@
+venv/
+__pycache__/
+*.pyc
+
+# Node.js
+node_modules/
+src/static/node_modules/
+npm-debug.log*
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+
+# Vite / build output
+dist/
+src/static/dist/
+build/
+
+# Env & OS
+.env
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+*.sqlite3
+
+# IDE
+.vscode/

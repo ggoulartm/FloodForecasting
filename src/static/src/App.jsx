@@ -70,24 +70,22 @@ function App() {
     setLoading(true)
 
     try {
-      // Charger les données historiques
-      const historicalResponse = await fetch(`${API_BASE_URL}/historical-data/${site.code_site}`)
-      const historicalResult = await historicalResponse.json()
-      
+      // Charger les données horaires (24 h)
+      const historicalResponse = await fetch(`${API_BASE_URL}/real-time-data/${site.code_site}`)
+      const historicalResult   = await historicalResponse.json()
       if (historicalResult.success) {
-        const processedHistorical = historicalResult.observations.map(obs => ({
-          date: obs.date_obs_elab,
-          debit: parseFloat(obs.resultat_obs_elab) || 0
-        })).filter(item => item.debit > 0)
-        setHistoricalData(processedHistorical)
-      }
+        const cutoff = Date.now() - 24*60*60*1000
 
-      // Charger les données temps réel
-      const realTimeResponse = await fetch(`${API_BASE_URL}/real-time-data/${site.code_site}`)
-      const realTimeResult = await realTimeResponse.json()
-      
-      if (realTimeResult.success) {
-        setRealTimeData(realTimeResult.observations.slice(0, 3))
+        const hourly24h = historicalResult.observations
+          .map(obs => ({
+            date: obs.date_obs,                          // ISO horaire
+            debit: parseFloat(obs.resultat_obs) || 0
+          }))
+          .filter(item => item.debit > 0
+                      && new Date(item.date).getTime() >= cutoff )
+          .sort((a, b) => new Date(a.date) - new Date(b.date))
+
+        setHistoricalData(hourly24h)
       }
 
       // Charger les prévisions avec l'algorithme sélectionné
@@ -101,6 +99,7 @@ function App() {
           debit_min: prev.valeur_min || prev.valeur_prevue * 0.8,
           debit_max: prev.valeur_max || prev.valeur_prevue * 1.2
         }))
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
         setForecastData(processedForecast)
       }
 
@@ -298,22 +297,27 @@ function App() {
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <span className="text-purple-600">📈</span>
-              Données historiques (30 derniers jours)
+              Données horaires (24 dernières heures)
             </h2>
-            <p className="text-gray-600 mb-4">Évolution du débit moyen journalier</p>
+            <p className="text-gray-600 mb-4">Évolution du débit horaire sur 24 h</p>
             
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={historicalData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="date" 
-                    tickFormatter={formatDate}
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={ts =>
+                      new Date(ts).toLocaleTimeString('fr-FR', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })
+                    }
                     angle={-45}
                     textAnchor="end"
                     height={60}
                   />
-                  <YAxis 
+                  <YAxis
                     label={{ value: 'Débit (m³/s)', angle: -90, position: 'insideLeft' }}
                   />
                   <Tooltip 
